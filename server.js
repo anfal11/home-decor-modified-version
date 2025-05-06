@@ -139,7 +139,9 @@ function onHttpStart() {
 // Listen on port 8080. The default port for http is 80, https is 443. We use 8080 here
 // because sometimes port 80 is in use by other applications on the machine
 // Connect to MongoDB and start the server
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGO_URI)
+
+// mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => {
         console.log("Connected to MongoDB");
         app.listen(HTTP_PORT, onHttpStart); // Start the server after MongoDB connection is established
@@ -147,3 +149,5 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
     .catch(err => {
         console.log("Can't connect to the MongoDB: " + err);
     });
+
+    module.exports = app;
