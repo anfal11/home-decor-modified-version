@@ -9,6 +9,10 @@
 // * Course/Section: WEB322
 // *
 // **************************************************************************************/
+const multer = require("multer");
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+module.exports.upload = upload;
 const path = require("path");
 const express = require("express");
 const app = express();
@@ -19,7 +23,7 @@ const formData = require("form-data"); // Required for Mailgun
 const session = require("express-session");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const fileUpload = require("express-fileupload");
+// const fileUpload = require("express-fileupload");
 const loadDataController = require("./controllers/loadDataController");
 
 // Load environment variables
@@ -38,7 +42,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Add middleware
-app.use(fileUpload());
+// app.use(fileUpload());
+app.use(express.urlencoded({ extended: true }));
 
 
 // Set up EJS

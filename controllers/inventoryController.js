@@ -3,10 +3,12 @@ const router = express.Router();
 const Product = require("../models/productModel");
 const fs = require("fs");
 const path = require("path");
-const multer = require("multer");
+// const multer = require("multer");
 const cloudinary = require("../config/cloudinary");
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage });
+const { upload } = require("../server");
+
 
 // Helper function to delete image file
 const deleteImageFile = (imageUrl) => {
@@ -188,89 +190,137 @@ router.get("/edit/:id", async (req, res) => {
 
 
 // Edit product - POST
+// router.post("/edit/:id", upload.single("productImage"), async (req, res) => {
+//     if (!req.session.user || req.session.user.role !== "dataEntryClerk") {
+//         return res.status(401).render("401", { title: "Unauthorized" });
+//     }
+
+//     try {
+//         const productId = req.params.id;
+//     const existingProduct = await Product.findById(productId);
+//     if (!existingProduct) return res.status(404).send("Product not found");
+
+//     let imageUrl = existingProduct.imageUrl;
+
+//     if (req.file) {
+//         const uploadResult = await new Promise((resolve, reject) => {
+//             cloudinary.uploader.upload_stream({ resource_type: "image" }, (err, result) => {
+//                 if (err) reject(err);
+//                 else resolve(result);
+//             }).end(req.file.buffer);
+//         });
+//         imageUrl = uploadResult.secure_url;
+//     }
+//         // const existingProduct = await Product.findById(productId);
+        
+//         // if (!existingProduct) {
+//         //     return res.redirect("/inventory/list?error=Product not found");
+//         // }
+
+//         // let imageUrl = existingProduct.imageUrl;
+
+//         // Handle new image upload if provided
+//         if (req.files && req.files.productImage) {
+//             const productImage = req.files.productImage;
+//             const allowedTypes = ['image/jpeg', 'image/png', 'image/gif','image/jpg'];
+            
+//             if (!allowedTypes.includes(productImage.mimetype)) {
+//                 return res.render("inventory/edit", {
+//                     title: "Edit Product",
+//                     product: { ...existingProduct.toObject(), ...req.body },
+//                     error: "Only JPEG, PNG, or GIF images are allowed"
+//                 });
+//             }
+
+//             // Delete old image file if it exists
+//             if (existingProduct.imageUrl) {
+//                 const oldImagePath = path.join(__dirname, '../public', existingProduct.imageUrl);
+//                 if (fs.existsSync(oldImagePath)) {
+//                     }
+//             }
+
+//             // Save new image
+//             const uniqueName = `product-${Date.now()}${path.extname(productImage.name)}`;
+//             const uploadPath = path.join(__dirname, '../public/images', uniqueName);
+//             await productImage.mv(uploadPath);
+//             imageUrl = `/images/${uniqueName}`;
+//         }
+
+//         // Update product
+//         const updatedProduct = {
+//             title: req.body.title,
+//             description: req.body.description,
+//             category: req.body.category,
+//             price: parseFloat(req.body.price),
+//             salePrice: req.body.salePrice ? parseFloat(req.body.salePrice) : undefined,
+//             shippingWeight: parseInt(req.body.shippingWeight),
+//             shippingWidth: parseInt(req.body.shippingWidth),
+//             shippingLength: parseInt(req.body.shippingLength),
+//             shippingHeight: parseInt(req.body.shippingHeight),
+//             imageUrl: imageUrl, // Use either the new or existing image URL
+//             featured: !!req.body.featured 
+//         };
+
+//         await Product.findByIdAndUpdate(productId, updatedProduct);
+//         res.redirect("/inventory/list?success=Product updated successfully");
+//     } catch (err) {
+//         console.error("Error updating product:", err);
+//         res.render("inventory/edit", {
+//             title: "Edit Product",
+//             product: { ...existingProduct.toObject(), ...req.body },
+//             error: "Error updating product: " + err.message
+//         });
+//     }
+// });
+
 router.post("/edit/:id", upload.single("productImage"), async (req, res) => {
     if (!req.session.user || req.session.user.role !== "dataEntryClerk") {
-        return res.status(401).render("401", { title: "Unauthorized" });
+      return res.status(401).render("401", { title: "Unauthorized" });
     }
-
+  
     try {
-        const productId = req.params.id;
-    const existingProduct = await Product.findById(productId);
-    if (!existingProduct) return res.status(404).send("Product not found");
-
-    let imageUrl = existingProduct.imageUrl;
-
-    if (req.file) {
+      const productId = req.params.id;
+      const existingProduct = await Product.findById(productId);
+      if (!existingProduct) return res.status(404).send("Product not found");
+  
+      let imageUrl = req.body.existingImageUrl || existingProduct.imageUrl;
+  
+      if (req.file) {
         const uploadResult = await new Promise((resolve, reject) => {
-            cloudinary.uploader.upload_stream({ resource_type: "image" }, (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
-            }).end(req.file.buffer);
+          cloudinary.uploader.upload_stream({ resource_type: "image" }, (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          }).end(req.file.buffer);
         });
         imageUrl = uploadResult.secure_url;
-    }
-        // const existingProduct = await Product.findById(productId);
-        
-        // if (!existingProduct) {
-        //     return res.redirect("/inventory/list?error=Product not found");
-        // }
-
-        // let imageUrl = existingProduct.imageUrl;
-
-        // Handle new image upload if provided
-        if (req.files && req.files.productImage) {
-            const productImage = req.files.productImage;
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif','image/jpg'];
-            
-            if (!allowedTypes.includes(productImage.mimetype)) {
-                return res.render("inventory/edit", {
-                    title: "Edit Product",
-                    product: { ...existingProduct.toObject(), ...req.body },
-                    error: "Only JPEG, PNG, or GIF images are allowed"
-                });
-            }
-
-            // Delete old image file if it exists
-            if (existingProduct.imageUrl) {
-                const oldImagePath = path.join(__dirname, '../public', existingProduct.imageUrl);
-                if (fs.existsSync(oldImagePath)) {
-                    }
-            }
-
-            // Save new image
-            const uniqueName = `product-${Date.now()}${path.extname(productImage.name)}`;
-            const uploadPath = path.join(__dirname, '../public/images', uniqueName);
-            await productImage.mv(uploadPath);
-            imageUrl = `/images/${uniqueName}`;
-        }
-
-        // Update product
-        const updatedProduct = {
-            title: req.body.title,
-            description: req.body.description,
-            category: req.body.category,
-            price: parseFloat(req.body.price),
-            salePrice: req.body.salePrice ? parseFloat(req.body.salePrice) : undefined,
-            shippingWeight: parseInt(req.body.shippingWeight),
-            shippingWidth: parseInt(req.body.shippingWidth),
-            shippingLength: parseInt(req.body.shippingLength),
-            shippingHeight: parseInt(req.body.shippingHeight),
-            imageUrl: imageUrl, // Use either the new or existing image URL
-            featured: !!req.body.featured 
-        };
-
-        await Product.findByIdAndUpdate(productId, updatedProduct);
-        res.redirect("/inventory/list?success=Product updated successfully");
+      }
+  
+      Object.assign(existingProduct, {
+        title: req.body.title,
+        description: req.body.description,
+        category: req.body.category,
+        price: parseFloat(req.body.price),
+        salePrice: req.body.salePrice ? parseFloat(req.body.salePrice) : undefined,
+        shippingWeight: parseInt(req.body.shippingWeight),
+        shippingWidth: parseInt(req.body.shippingWidth),
+        shippingLength: parseInt(req.body.shippingLength),
+        shippingHeight: parseInt(req.body.shippingHeight),
+        featured: req.body.featured ? true : false,
+        imageUrl,
+      });
+  
+      await existingProduct.save();
+      res.redirect("/inventory/list");
     } catch (err) {
-        console.error("Error updating product:", err);
-        res.render("inventory/edit", {
-            title: "Edit Product",
-            product: { ...existingProduct.toObject(), ...req.body },
-            error: "Error updating product: " + err.message
-        });
+      console.error("Error updating product:", err);
+      res.status(500).render("error", {
+        title: "Something broke!",
+        message: "An error occurred while updating the product.",
+      });
     }
-});
-
+  });
+  
+  
 
 // Remove product - GET (confirmation)
 router.get("/remove/:id", async (req, res) => {
