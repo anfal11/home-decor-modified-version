@@ -3,14 +3,17 @@ const router = express.Router();
 const Product = require("../models/productModel");
 const fs = require("fs");
 const path = require("path");
+const multer = require("multer");
+const cloudinary = require("../config/cloudinary");
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Helper function to delete image file
 const deleteImageFile = (imageUrl) => {
     if (imageUrl && imageUrl.startsWith("/images/")) {
         const imagePath = path.join(__dirname, "../public", imageUrl);
         if (fs.existsSync(imagePath)) {
-            fs.unlinkSync(imagePath);
-        }
+            }
     }
 };
 
@@ -185,25 +188,39 @@ router.get("/edit/:id", async (req, res) => {
 
 
 // Edit product - POST
-router.post("/edit/:id", async (req, res) => {
+router.post("/edit/:id", upload.single("productImage"), async (req, res) => {
     if (!req.session.user || req.session.user.role !== "dataEntryClerk") {
         return res.status(401).render("401", { title: "Unauthorized" });
     }
 
     try {
         const productId = req.params.id;
-        const existingProduct = await Product.findById(productId);
-        
-        if (!existingProduct) {
-            return res.redirect("/inventory/list?error=Product not found");
-        }
+    const existingProduct = await Product.findById(productId);
+    if (!existingProduct) return res.status(404).send("Product not found");
 
-        let imageUrl = existingProduct.imageUrl;
+    let imageUrl = existingProduct.imageUrl;
+
+    if (req.file) {
+        const uploadResult = await new Promise((resolve, reject) => {
+            cloudinary.uploader.upload_stream({ resource_type: "image" }, (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            }).end(req.file.buffer);
+        });
+        imageUrl = uploadResult.secure_url;
+    }
+        // const existingProduct = await Product.findById(productId);
+        
+        // if (!existingProduct) {
+        //     return res.redirect("/inventory/list?error=Product not found");
+        // }
+
+        // let imageUrl = existingProduct.imageUrl;
 
         // Handle new image upload if provided
         if (req.files && req.files.productImage) {
             const productImage = req.files.productImage;
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif','image/jpg'];
             
             if (!allowedTypes.includes(productImage.mimetype)) {
                 return res.render("inventory/edit", {
@@ -217,8 +234,7 @@ router.post("/edit/:id", async (req, res) => {
             if (existingProduct.imageUrl) {
                 const oldImagePath = path.join(__dirname, '../public', existingProduct.imageUrl);
                 if (fs.existsSync(oldImagePath)) {
-                    fs.unlinkSync(oldImagePath);
-                }
+                    }
             }
 
             // Save new image
